@@ -1,0 +1,43 @@
+version: "2"
+services:
+  db.mongo:
+    container_name: db.mongo
+    image: mongo:latest
+    environment:
+      - MONGO_DATA_DIR=/data/db
+      - MONGO_LOG_DIR=/dev/null
+    ports:
+      - 27017:27017
+    volumes:
+      - ./data/db:/data/db
+    networks:
+      - loggernetwork
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile.dev
+    volumes:
+      - /app/node_modules
+      - ./client:/app
+    ports:
+      - '3000:3000'
+    restart: on-failure
+    container_name: client
+    networks:
+      - loggernetwork
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile.dev
+    ports:
+      - '9003:9003'
+    restart: on-failure
+    container_name: server
+    volumes:
+      - /app/node_modules # Inside the container, don't try to override this folder, just leave as is
+      - ./server:/app # Look at the server directory and copy everything into the app folder in the container
+    networks:
+      - loggernetwork
+networks:
+  loggernetwork:
+    driver: bridge      
