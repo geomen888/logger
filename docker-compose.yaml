@@ -1,7 +1,7 @@
 version: "2"
 services:
-  db.mongo:
-    container_name: db.mongo
+  mongo:
+    container_name: mongo
     image: mongo:latest
     environment:
       - MONGO_DATA_DIR=/data/db
@@ -11,7 +11,7 @@ services:
     volumes:
       - ./data/db:/data/db
     networks:
-      - loggernetwork
+      - mongo_net
   client:
     build:
       context: ./client
@@ -24,7 +24,7 @@ services:
     restart: on-failure
     container_name: client
     networks:
-      - loggernetwork
+      - mongo_net
   server:
     build:
       context: ./server
@@ -37,7 +37,9 @@ services:
       - /app/node_modules # Inside the container, don't try to override this folder, just leave as is
       - ./server:/app # Look at the server directory and copy everything into the app folder in the container
     networks:
-      - loggernetwork
+      - mongo_net
+    depends_on: 
+      - "mongo"  
 networks:
-  loggernetwork:
+  mongo_net:
     driver: bridge      
