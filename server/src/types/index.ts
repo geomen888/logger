@@ -1,7 +1,14 @@
 
 export interface IRepository {
-    saveUsingRepository<T>(log:  T): Promise<T>;
-    findAll(): any
+    findAll(): Promise<any>;
+    saveTransactionManager(file: any): Promise<any>;
+}
+
+export interface LogCsvRow {
+    id: number;
+    cardHolderNumberHash: string;
+    datetime: Date;
+    amount: number;
 }
 
 /**

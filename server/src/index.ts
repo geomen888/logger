@@ -16,7 +16,6 @@ import { Container } from "typedi";
    await createConnection()
    .then(async connection => {
     console.log("connected MongoDb: OK");
-    console.log("path:", __dirname);
     const koa = createKoaServer({
         routePrefix: "/api",
         controllers: [__dirname + "/routing/controllers/*{.js,.ts}"],
