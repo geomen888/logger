@@ -5,15 +5,15 @@
     "database": "transaction",
     "useUnifiedTopology": true,
     "synchronize": true,
-    "logging": false,
+    "logging": true,
     "entities": [
-      "src/entity/*.js"
+      "src/entity/*{.js,.ts}"
     ],
     "subscribers": [
-      "src/subscriber/*.js"
+      "src/subscriber/*{.js,.ts}"
     ],
     "migrations": [
-      "src/migration/*.js"
+      "src/migration/*{.js,.ts}"
     ],
     "cli": {
       "entitiesDir": "src/entity",

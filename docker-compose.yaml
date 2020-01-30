@@ -30,7 +30,7 @@ services:
       context: ./server
       dockerfile: Dockerfile.dev
     ports:
-      - '9003:9003'
+      - '9005:9005'
     restart: on-failure
     container_name: server
     volumes:
@@ -38,7 +38,7 @@ services:
       - ./server:/app # Look at the server directory and copy everything into the app folder in the container
     networks:
       - mongo_net
-    depends_on: 
+    links:  
       - "mongo"  
 networks:
   mongo_net:
