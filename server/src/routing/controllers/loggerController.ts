@@ -2,10 +2,10 @@ import { JsonController, UploadedFile, Param, Body, Get, Ctx, Post, Put, Delete 
 import { Context } from "koa";
 import { Container } from "typedi";
 import { IRepository } from "../../types";
+import { getPath } from "./../../services";
 import * as _ from "partial-js";
 import "./../../repository/transactionRepository";
 const fs = require("fs"),
-    path = require("path"),
     autoBind = require("auto-bind");
 
 
@@ -20,17 +20,18 @@ export class TransactionController {
 
     @Get("/transactions")
     getAll(@Ctx() ctx: Context, next?: (err?: any) => any): any {
-        return;
+        const { transRep: { findAll } } = this;
+        return findAll();
     }
 
     @Post("/file") // this.transRep.fileUploadOptions
     saveFile(@Ctx() ctx: Context, @UploadedFile("file") file: any) {
-
+        const { transRep: { saveTransactionManager } } = this;
         return _.go(file, _.callback((file, next) => {
-            console.log("path:", path.resolve(__dirname, '..', 'uploadedFiles', file.originalname))
-            fs.writeFile(process.cwd() + `/uploadedFiles/${file.originalname}`, file.buffer, (err: Error | null) => {
+            console.log("path:", getPath(file))
+            fs.writeFile(getPath(file), file.buffer, (err: Error | null) => {
                 if (err) {
-                    console.error('uploadPhoto errerrerr:::', err);
+                    console.error('uploadTransactions error:::', err);
                     next(err);
                     return;
                 }
@@ -39,31 +40,38 @@ export class TransactionController {
 
             })
 
-        }), feed => {
+        }), async feed => {
             if (feed instanceof Error) {
                 ctx.response.status = 401;
                 return {
-                    message: "Error write file"
+                    message: "Error read file",
+                    code: 700,
                 };
             }
-            return {
-                status: 1,
-                data: {
-                    filename: file.originalname,
-                    size: file.size,
-                    fieldname: file.fieldname
-                }
-            };
-
-        })
-
-
+            return await saveTransactionManager(feed)
+                .then(() => {
+                    return {
+                        status: 1,
+                        data: {
+                            filename: file.originalname,
+                            size: file.size,
+                            fieldname: file.fieldname
+                        }
+                    };
 
 
+                })
+                .catch((err) => {
+                    console.error("saveTransactionManager:err:", err);
+                    ctx.response.status = 501;
+                    return {
+                        message: "Error write to db",
+                        code: 701,
+                    };
 
+                })
+
+            })
     }
-
-
-
 
 }

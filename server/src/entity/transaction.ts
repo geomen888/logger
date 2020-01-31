@@ -1,35 +1,44 @@
-import {Entity, PrimaryGeneratedColumn, Column } from "typeorm";
+import {Entity, PrimaryGeneratedColumn, Column, ObjectIdColumn, PrimaryColumn } from "typeorm";
 import { LogCsvRow } from "./../types";
+import { removeNL } from "./../services";
 
 export type UserCallback = (err: Error | null, trans?:Transaction) => void;
+const autoBind = require("auto-bind");
 
 
 @Entity()
-export class Transaction implements LogCsvRow {
-    
+export class Transaction  {
     @PrimaryGeneratedColumn()
-    id: number;
+    id!: string;
+  
+    @ObjectIdColumn({ name: 'id' })
+    _id!: string;
     
-    @Column()
+    @PrimaryColumn()
     cardHolderNumberHash: string;
     
-    @Column()
-    datetime: Date;
+    @PrimaryColumn()
+    datetime: string;
 
     @Column()
     amount: number;
 
-    static findByParams(id: number, cardHolderNumberHash: string, datetime: Date, amount: number, cb: UserCallback): void {
+    static executeByParams({ id, cardHolderNumberHash, datetime, amount }:LogCsvRow, cb: UserCallback): void {
         setImmediate(() => {
+            
             cb(null, new Transaction(id, cardHolderNumberHash, datetime, amount));
         });
     }
     
-    constructor(id: number, cardHolderNumberHash: string, datetime: Date, amount: number)  {
-        this.id = id;
+    constructor(id: string, cardHolderNumberHash: string, datetime: string, amount: number)  {
+        if (id) {
+        console.log("constructor:",removeNL(id).trim())
+        this.id = removeNL(id).trim();
         this.cardHolderNumberHash = cardHolderNumberHash;
         this.datetime = datetime;
         this.amount = amount;
+        }
+        autoBind(this);
     }
     
 }

@@ -1,3 +1,4 @@
+import { type } from "os";
 
 export interface IRepository {
     findAll(): Promise<any>;
@@ -5,21 +6,15 @@ export interface IRepository {
 }
 
 export interface LogCsvRow {
-    id: number;
+    id: string;
     cardHolderNumberHash: string;
-    datetime: Date;
+    datetime: string;
     amount: number;
 }
 
-/**
- * fileUploadOptions: () => {
-        options: () => {
-            storage: any;
-            fileFilter: (ctx: Context, file: any, cb: Function) => void;
-            limits: {
-                fieldNameSize: number;
-                fileSize: number;
-            };
-        };
-    }
- */
+export type LogCsvRowT = {
+    id: string;
+    cardHolderNumberHash: string;
+    datetime: string;
+    amount: string;
+}

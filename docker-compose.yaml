@@ -39,7 +39,9 @@ services:
     networks:
       - mongo_net
     links:  
-      - "mongo"  
+      - "mongo"
+    depends_on: 
+      - "mongo"    
 networks:
   mongo_net:
     driver: bridge      
