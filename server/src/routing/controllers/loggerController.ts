@@ -2,7 +2,7 @@ import { JsonController, UploadedFile, Param, Body, Get, Ctx, Post, Put, Delete 
 import { Context } from "koa";
 import { Container } from "typedi";
 import { IRepository } from "../../types";
-import { getPath, mimeTypes, reformateError, getErrorMsg } from "./../../services";
+import { getPath, mimeTypes, reformateError, getErrorMsg, headersMain } from "./../../services";
 import * as _ from "partial-js";
 import "./../../repository/transactionRepository";
 const fs = require("fs"),
@@ -20,9 +20,21 @@ export class TransactionController {
     }
 
     @Get("/transactions")
-    getAll(): any {
+    async getAll(@Ctx() ctx: Context) {
         const { transRep: { findAll } } = this;
-        return findAll();
+        try {
+        const transactions = await findAll();
+        
+        return { status: 1, 
+           data: { transactions, tabHeaders: headersMain },
+     };
+    } catch (e) {
+        ctx.response.status = 501;
+        return {
+            message: "Error read db",
+            code: 705,
+        };
+    }
     }
    
     @Post("/file") // this.transRep.fileUploadOptions
@@ -68,8 +80,6 @@ export class TransactionController {
                             fieldname: file.fieldname
                         }
                     };
-
-
                 })
                 .catch((err) => {
                     console.error("saveTransactionManager:err:", err);
