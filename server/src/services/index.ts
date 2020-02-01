@@ -19,11 +19,14 @@ removeNL = (s:string):string => {
       }
     return s.replace(/[\n\r\t]/g, "");
     },
- reformateError = ({message}: {message:string}) => R.when(R.allPass([R.contains('{'), R.contains('}')]), R.compose(R.fromPairs, R.splitEvery(2), R.converge(R.concat,[R.compose(R.map(R.compose(R.reduce(R.concat, ""), R.match(/\w/gmi))), R.slice(0, -2)), R.compose(R.of, R.join(" "), R.takeLast(2))]),R.reject(R.anyPass([R.isEmpty, R.equals(",")])), R.match(reg2), R.trim, R.replace(regExp, "$1")))(message),
+ reformateError = ({message}: {message:string}) => R.when(R.allPass([R.contains('{'), R.contains('}')]), R.compose(R.ifElse(R.contains("code:"), 
+ R.compose(R.fromPairs, R.of, R.map(R.compose(R.reduce(R.concat, ""), R.match(/\w/gmi)))),
+ R.compose(R.when(() => R.contains("duplicate", message),  R.merge({code: 704})), R.fromPairs, R.splitEvery(2), R.converge(R.concat,[R.compose(R.map(R.compose(R.reduce(R.concat, ""), R.match(/\w/gmi))), R.slice(0, -2)), R.compose(R.of, R.join(" "), R.takeLast(2))]))), R.reject(R.anyPass([R.isEmpty, R.equals(",")])), R.match(reg2), R.trim, R.replace(regExp, "$1")))(message),
  mimeTypes: string[] = ["application/csv",
   "application/x-csv",
   "text/csv",
   "text/comma-separated-values",
   "text/x-comma-separated-values",
   "text/tab-separated-values" ],
-  headersMain:string[] = ["id", "cardHolderNumberHash", "datetime", "amount"]; 
+  headersMain:string[] = ["id", "cardHolderNumberHash", "datetime", "amount"], 
+  getErrorMsg = ({message}: {message:string}) => R.compose(R.objOf("message"), R.trim, R.slice(0, R.indexOf("{", message)))(message); 

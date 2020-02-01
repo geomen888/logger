@@ -4,19 +4,16 @@ import { Service } from "typedi";
 import * as csv from "fast-csv";
 import { parse } from '@fast-csv/parse';
 import * as async from "async";
-import { getPath, removeNL, reformateError, headersMain } from "./../services";
+import { getPath, removeNL, headersMain } from "./../services";
 import { Transaction } from "../entity/transaction";
 import { InjectRepository, InjectManager } from "typeorm-typedi-extensions";
 import { IRepository, LogCsvRow, LogCsvRowT } from "../types";
 
 const autoBind = require("auto-bind"),
-    path = require("path"),
     R = require("ramda"),
-    regEx = new RegExp("\\n"),
     { StringDecoder } = require('string_decoder'),
     decoder = new StringDecoder('utf8'),
     fs = require('mz/fs');
-    
 
 
 @Service("transaction:rep")
@@ -27,7 +24,6 @@ export class TransActionRepository implements IRepository {
 
     constructor(@InjectRepository(Transaction) private InjectRepository: Repository<Transaction>) {
         autoBind(this);
-
     }
 
     async saveTransactionManager(file: any) {
@@ -35,14 +31,13 @@ export class TransActionRepository implements IRepository {
         pathToFileFolder = getPath(file);
         let buffer: LogCsvRow[] = [],
         headers: string[]=[],
-        errorPool: string[] =[],
             counter = 0;
         return await new Promise((resolve, reject) => {
             let stream = fs.createReadStream(pathToFileFolder)
                 .pipe(parse<LogCsvRowT, LogCsvRowT>({ headers: headersMain, strictColumnHandling: true, discardUnmappedColumns: true }))
                 .pipe(csv.format<LogCsvRowT, LogCsvRow>({ headers: true }))
                 .on("error", (err) => { 
-                    console.error("EROOR FAST-CSV ", err.message);
+                    console.error("ERROR FAST-CSV ", err.message);
                     reject(err); } )
                 .on("data", async (doc:Buffer) => {
                     stream.pause();
@@ -58,9 +53,8 @@ export class TransActionRepository implements IRepository {
                         const payl = R.compose(R.evolve({ amount: R.ifElse(R.isNil, R.always(0), parseInt) }), R.fromPairs, R.tap(X => console.log("Trimdoc:", JSON.stringify(X))), R.map(R.map(removeNL)))(R.transpose([headers, decoder.write(doc).split(',')]));
                         const { id, datetime, cardHolderNumberHash } =  R.pickAll(headersMain, payl);
                         if (!id || !datetime || !cardHolderNumberHash) {
-                            const err = new Error(`id:${id? id:"N/A"} in data structure has empty fields  { code: \". 703\"" }`);
+                            const err = new Error(`id:${id?id:"N/A"} in data structure has empty fields {code: 703}`);
                            stream.destroy(err);
-                            // reject({ code: 703, message: err.message});
                            return;
                         }
                         buffer.push(payl);
@@ -87,25 +81,13 @@ export class TransActionRepository implements IRepository {
                         }, function (err, result) {
                             if (err) {
                                 console.error("result:error", err);
-                                stream.destroy(err);
                                 console.warn("predicate Error:", err instanceof Error && err.message && R.contains("E11000 duplicate key error collection", err.message))
-                                    if (err instanceof Error && err.message && R.contains("E11000 duplicate key error collection", err.message)) {
-                                        // const _err =`${payload?.id}:duplicate`;
-                                        console.error("Circuit duplicate ERROR!!!");
-                                          // errorPool.push(_err);
-                                           // cb(null, _err);
-                                           resolve({ conflict: { ...reformateError(err), state: "duplicate" } });
-                                        
-                                    }  else {
-                                        reject(err);
-                                    }
-                              // console.error("result:end: message", typeof err.message);
+                                stream.destroy(err);
                                 return;
                             }
                             buffer = [];
                             counter = 0;
                             console.info("result:count>100:", result);
-                            
                         });
                     }
                     stream.resume();
@@ -133,7 +115,6 @@ export class TransActionRepository implements IRepository {
                                       error => {
                                           cb(error);
                                       });  
-                         
                             })
                       
                     }, function (err, result) {
@@ -141,28 +122,14 @@ export class TransActionRepository implements IRepository {
                             console.error("result:end: error", err);
                             stream.destroy(err);
                             console.warn("predicate Error:", err instanceof Error && err.message && R.contains("E11000 duplicate key error collection", err.message))
-                                if (err instanceof Error && err.message && R.contains("E11000 duplicate key error collection", err.message)) {
-                                    // const _err =`${payload?.id}:duplicate`;
-                                    console.error("Circuit duplicate ERROR!!!");
-                                      // errorPool.push(_err);
-                                       // cb(null, _err);
-                                       resolve({ conflict: { ...reformateError(err), state: "duplicate" } });
-                                    
-                                }  else {
-                                    reject(err);
-                                }
-                          // console.error("result:end: message", typeof err.message);
                             return;
                         }
                         buffer = [];
                         counter = 0;
-                        console.error("Eror Pool!!!", errorPool);
                         console.info("result:end:", result);
                         resolve();
                     })
                     : resolve();
-
-                    
               });
         });
     }
@@ -170,8 +137,5 @@ export class TransActionRepository implements IRepository {
     findAll() {
         return this.InjectRepository.find();
     }
-
-   
-
 
 }

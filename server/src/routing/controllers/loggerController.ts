@@ -2,7 +2,7 @@ import { JsonController, UploadedFile, Param, Body, Get, Ctx, Post, Put, Delete 
 import { Context } from "koa";
 import { Container } from "typedi";
 import { IRepository } from "../../types";
-import { getPath, mimeTypes } from "./../../services";
+import { getPath, mimeTypes, reformateError, getErrorMsg } from "./../../services";
 import * as _ from "partial-js";
 import "./../../repository/transactionRepository";
 const fs = require("fs"),
@@ -20,16 +20,11 @@ export class TransactionController {
     }
 
     @Get("/transactions")
-    getAll(@Ctx() ctx: Context, next?: (err?: any) => any): any {
+    getAll(): any {
         const { transRep: { findAll } } = this;
         return findAll();
     }
-    // @Get("/removeAll")
-    // deleteAll(@Ctx() ctx: Context, next?: (err?: any) => any): any {
-    //     const { transRep: { removeAll } } = this;
-    //     return removeAll();
-    // }
-
+   
     @Post("/file") // this.transRep.fileUploadOptions
     saveFile(@Ctx() ctx: Context, @UploadedFile("file") file: any) {
         const { transRep: { saveTransactionManager } } = this;
@@ -64,11 +59,10 @@ export class TransactionController {
                 };
             }
             return await saveTransactionManager(feed)
-                .then((response) => {
+                .then(() => {
                     return {
-                        status: R.isNil(response) ? 1 : 2,
+                        status:1,
                         data: {
-                            ...response,
                             filename: file.originalname,
                             size: file.size,
                             fieldname: file.fieldname
@@ -79,12 +73,13 @@ export class TransactionController {
                 })
                 .catch((err) => {
                     console.error("saveTransactionManager:err:", err);
-                    if (R.has("code", err)) {
+                   //  console.error("saveTransactionManager:err:reformateError", reformateError(err));
+                    if (R.compose(R.has("code"), reformateError)(err)) {
                         // R.evolve({code: R.replace(/\W(\d*)/gmi, "$1")})(k)
-
                         ctx.response.status = 403;
                         return {
-                            ...err
+                            ...reformateError(err),
+                            ...getErrorMsg(err)
                         };
 
                     } 
@@ -93,10 +88,6 @@ export class TransactionController {
                             message: "Error write to db",
                             code: 701,
                         };
-
-                    
-                   
-
                 })
 
             })
