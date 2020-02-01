@@ -2,10 +2,11 @@ import { JsonController, UploadedFile, Param, Body, Get, Ctx, Post, Put, Delete 
 import { Context } from "koa";
 import { Container } from "typedi";
 import { IRepository } from "../../types";
-import { getPath } from "./../../services";
+import { getPath, mimeTypes } from "./../../services";
 import * as _ from "partial-js";
 import "./../../repository/transactionRepository";
 const fs = require("fs"),
+      R = require("ramda"),
     autoBind = require("auto-bind");
 
 
@@ -23,10 +24,24 @@ export class TransactionController {
         const { transRep: { findAll } } = this;
         return findAll();
     }
+    // @Get("/removeAll")
+    // deleteAll(@Ctx() ctx: Context, next?: (err?: any) => any): any {
+    //     const { transRep: { removeAll } } = this;
+    //     return removeAll();
+    // }
 
     @Post("/file") // this.transRep.fileUploadOptions
     saveFile(@Ctx() ctx: Context, @UploadedFile("file") file: any) {
         const { transRep: { saveTransactionManager } } = this;
+        // console.info(file);
+        if (!R.contains(R.propOr("N/A","mimetype", file))(mimeTypes)) {
+            ctx.response.status = 403;
+            return {
+                message: "Error mimetype file",
+                code: 702,
+            };
+
+        }
         return _.go(file, _.callback((file, next) => {
             console.log("path:", getPath(file))
             fs.writeFile(getPath(file), file.buffer, (err: Error | null) => {
@@ -49,10 +64,11 @@ export class TransactionController {
                 };
             }
             return await saveTransactionManager(feed)
-                .then(() => {
+                .then((response) => {
                     return {
-                        status: 1,
+                        status: R.isNil(response) ? 1 : 2,
                         data: {
+                            ...response,
                             filename: file.originalname,
                             size: file.size,
                             fieldname: file.fieldname
@@ -63,11 +79,23 @@ export class TransactionController {
                 })
                 .catch((err) => {
                     console.error("saveTransactionManager:err:", err);
-                    ctx.response.status = 501;
-                    return {
-                        message: "Error write to db",
-                        code: 701,
-                    };
+                    if (R.has("code", err)) {
+                        // R.evolve({code: R.replace(/\W(\d*)/gmi, "$1")})(k)
+
+                        ctx.response.status = 403;
+                        return {
+                            ...err
+                        };
+
+                    } 
+                        ctx.response.status = 501;
+                        return {
+                            message: "Error write to db",
+                            code: 701,
+                        };
+
+                    
+                   
 
                 })
 

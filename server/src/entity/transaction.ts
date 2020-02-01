@@ -1,4 +1,4 @@
-import {Entity, PrimaryGeneratedColumn, Column, ObjectIdColumn, PrimaryColumn } from "typeorm";
+import {Entity, PrimaryGeneratedColumn, Column, ObjectIdColumn, PrimaryColumn, Index } from "typeorm";
 import { LogCsvRow } from "./../types";
 import { removeNL } from "./../services";
 
@@ -7,6 +7,7 @@ const autoBind = require("auto-bind");
 
 
 @Entity()
+@Index(["cardHolderNumberHash", "datetime"], { unique: true })
 export class Transaction  {
     @PrimaryGeneratedColumn()
     id!: string;
@@ -14,10 +15,10 @@ export class Transaction  {
     @ObjectIdColumn({ name: 'id' })
     _id!: string;
     
-    @PrimaryColumn()
+    @Column()
     cardHolderNumberHash: string;
     
-    @PrimaryColumn()
+    @Column()
     datetime: string;
 
     @Column()

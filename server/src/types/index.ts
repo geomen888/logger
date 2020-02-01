@@ -3,6 +3,7 @@ import { type } from "os";
 export interface IRepository {
     findAll(): Promise<any>;
     saveTransactionManager(file: any): Promise<any>;
+    // removeAll(): Promise<void>;
 }
 
 export interface LogCsvRow {

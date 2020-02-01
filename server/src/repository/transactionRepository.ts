@@ -4,7 +4,7 @@ import { Service } from "typedi";
 import * as csv from "fast-csv";
 import { parse } from '@fast-csv/parse';
 import * as async from "async";
-import { getPath, removeNL } from "./../services";
+import { getPath, removeNL, reformateError, headersMain } from "./../services";
 import { Transaction } from "../entity/transaction";
 import { InjectRepository, InjectManager } from "typeorm-typedi-extensions";
 import { IRepository, LogCsvRow, LogCsvRowT } from "../types";
@@ -35,12 +35,15 @@ export class TransActionRepository implements IRepository {
         pathToFileFolder = getPath(file);
         let buffer: LogCsvRow[] = [],
         headers: string[]=[],
+        errorPool: string[] =[],
             counter = 0;
         return await new Promise((resolve, reject) => {
             let stream = fs.createReadStream(pathToFileFolder)
-                .pipe(parse<LogCsvRowT, LogCsvRowT>({ headers: ["id", "cardHolderNumberHash", "datetime", "amount"], strictColumnHandling: true }))
+                .pipe(parse<LogCsvRowT, LogCsvRowT>({ headers: headersMain, strictColumnHandling: true, discardUnmappedColumns: true }))
                 .pipe(csv.format<LogCsvRowT, LogCsvRow>({ headers: true }))
-                .on("error", reject)
+                .on("error", (err) => { 
+                    console.error("EROOR FAST-CSV ", err.message);
+                    reject(err); } )
                 .on("data", async (doc:Buffer) => {
                     stream.pause();
                    // console.log("doc:", decoder.write(doc));
@@ -52,10 +55,16 @@ export class TransActionRepository implements IRepository {
                         console.log("headers", headers)
                        
                     } else if (counter > 1) {
-                        const payl = R.compose(R.evolve({ amount: (int) => parseInt(int, 10) }), R.fromPairs, R.tap(X => console.log("Trimdoc:", JSON.stringify(X))), R.map(R.map(removeNL)))(R.transpose([headers, decoder.write(doc).split(',')]));
+                        const payl = R.compose(R.evolve({ amount: R.ifElse(R.isNil, R.always(0), parseInt) }), R.fromPairs, R.tap(X => console.log("Trimdoc:", JSON.stringify(X))), R.map(R.map(removeNL)))(R.transpose([headers, decoder.write(doc).split(',')]));
+                        const { id, datetime, cardHolderNumberHash } =  R.pickAll(headersMain, payl);
+                        if (!id || !datetime || !cardHolderNumberHash) {
+                            const err = new Error(`id:${id? id:"N/A"} in data structure has empty fields  { code: \". 703\"" }`);
+                           stream.destroy(err);
+                            // reject({ code: 703, message: err.message});
+                           return;
+                        }
                         buffer.push(payl);
                         console.log("doc:", JSON.stringify(payl));
-
                     }
                     counter++;
                     // console.log("doc:datetime:", typeof doc.datetime);
@@ -68,25 +77,29 @@ export class TransActionRepository implements IRepository {
                                 if (!transLog) {
                                     return cb(new Error("not valid user, pre-save"));
                                 }
-                                // return cb(null, entityManager.save(transLog));
-                                InjectRepository.findOne({cardHolderNumberHash: transLog.cardHolderNumberHash}).then((res:any) =>{
-                                    console.log("transLog:InjectRepository:", JSON.stringify(res));
-                                    const { cardHolderNumberHash: hash } = res;
-                                    if (hash !== transLog.cardHolderNumberHash) {
-                                        entityManager.save(transLog).then(result => {
+                                         entityManager.save(transLog).then(result => {
                                             cb(null, result)
                                           },
                                           error => {
                                               cb(error);
-                                          });  
-                                    }
-                                }) 
+                                           });  
                             });
                         }, function (err, result) {
                             if (err) {
-                                console.error("result:count>100:", err)
+                                console.error("result:error", err);
                                 stream.destroy(err);
-                                reject(err);
+                                console.warn("predicate Error:", err instanceof Error && err.message && R.contains("E11000 duplicate key error collection", err.message))
+                                    if (err instanceof Error && err.message && R.contains("E11000 duplicate key error collection", err.message)) {
+                                        // const _err =`${payload?.id}:duplicate`;
+                                        console.error("Circuit duplicate ERROR!!!");
+                                          // errorPool.push(_err);
+                                           // cb(null, _err);
+                                           resolve({ conflict: { ...reformateError(err), state: "duplicate" } });
+                                        
+                                    }  else {
+                                        reject(err);
+                                    }
+                              // console.error("result:end: message", typeof err.message);
                                 return;
                             }
                             buffer = [];
@@ -107,46 +120,43 @@ export class TransActionRepository implements IRepository {
                      ? async.mapSeries(buffer, (payload, cb) => {
                         Transaction.executeByParams(payload, (err, transLog) => {
                             if (err) {
+                                
                                 return cb(err);
                             }
                             if (!transLog) {
                                 return cb(new Error("not valid user, pre-save"));
                             }
                             console.log("transLog:end:", JSON.stringify(transLog, null, 2));
-                            InjectRepository.findOneOrFail({cardHolderNumberHash: transLog.cardHolderNumberHash}).then(res => {
-                                if(!res) {
-                                    cb(null, "N/A")
-
-                                    return;
-
-                                }
-                                console.log("transLog:end:InjectRepository:", JSON.stringify(res));
-                                const { cardHolderNumberHash: hash } = res;
-                                if (hash !== transLog.cardHolderNumberHash) {
-                                   return entityManager.save(transLog).then(result => {
+                                   entityManager.save(transLog).then(result => {
                                         cb(null, result)
                                       },
                                       error => {
                                           cb(error);
                                       });  
-                                }
-
-                                cb(null, "duplicate")
-
-                            }).catch(error => {
-                                cb(error);
+                         
                             })
-                          
-                        });
+                      
                     }, function (err, result) {
                         if (err) {
-                            console.error("result:end: error", err)
+                            console.error("result:end: error", err);
                             stream.destroy(err);
-                            reject(err);
+                            console.warn("predicate Error:", err instanceof Error && err.message && R.contains("E11000 duplicate key error collection", err.message))
+                                if (err instanceof Error && err.message && R.contains("E11000 duplicate key error collection", err.message)) {
+                                    // const _err =`${payload?.id}:duplicate`;
+                                    console.error("Circuit duplicate ERROR!!!");
+                                      // errorPool.push(_err);
+                                       // cb(null, _err);
+                                       resolve({ conflict: { ...reformateError(err), state: "duplicate" } });
+                                    
+                                }  else {
+                                    reject(err);
+                                }
+                          // console.error("result:end: message", typeof err.message);
                             return;
                         }
                         buffer = [];
                         counter = 0;
+                        console.error("Eror Pool!!!", errorPool);
                         console.info("result:end:", result);
                         resolve();
                     })
@@ -161,6 +171,7 @@ export class TransActionRepository implements IRepository {
         return this.InjectRepository.find();
     }
 
+   
 
 
 }
