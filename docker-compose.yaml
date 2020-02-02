@@ -1,4 +1,4 @@
-version: "2"
+version: "2.1"
 services:
   mongo:
     container_name: mongo
@@ -11,7 +11,8 @@ services:
     volumes:
       - ./data/db:/data/db
     networks:
-      - mongo_net
+      mongo_net:
+        ipv4_address: 172.19.0.3
   client:
     build:
       context: ./client
@@ -22,9 +23,16 @@ services:
     ports:
       - '3000:3000'
     restart: on-failure
+    links:  
+    - "server"
+    depends_on: 
+     - "server"
+     #  server:
+      #   condition: service_healthy
     container_name: client
     networks:
-      - mongo_net
+      mongo_net:
+        ipv4_address: 172.19.0.4
   server:
     build:
       context: ./server
@@ -32,16 +40,25 @@ services:
     ports:
       - '9005:9005'
     restart: on-failure
+    # healthcheck:
+     #  test: ["CMD-SHELL", "/server/healthcheck.sh"]
+      # interval: 15s
+      # timeout: 5s
+      # retries: 5
     container_name: server
     volumes:
       - /app/node_modules # Inside the container, don't try to override this folder, just leave as is
       - ./server:/app # Look at the server directory and copy everything into the app folder in the container
     networks:
-      - mongo_net
+      mongo_net:
+        ipv4_address: 172.19.0.5
     links:  
       - "mongo"
     depends_on: 
       - "mongo"    
 networks:
   mongo_net:
-    driver: bridge      
+    driver: bridge
+    ipam:
+      config:
+        - subnet: "172.19.0.0/16"

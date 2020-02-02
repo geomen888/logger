@@ -18,6 +18,12 @@ import {
   theme,
   utils,
 } from 'styled-minimal';
+import DataGrid, {
+  Column,
+  Selection,
+  Summary,
+  TotalItem
+} from "devextreme-react/data-grid";
 import Loader from 'components/Loader';
 
 const { responsive, spacer } = utils;
@@ -113,7 +119,7 @@ export class Log extends React.Component {
     const { query } = this.state;
     const { dispatch } = this.props;
 
-    dispatch(getTrans(query));
+   dispatch(getTrans(query));
   }
 
   componentDidUpdate(prevProps) {
@@ -137,16 +143,51 @@ export class Log extends React.Component {
   };
 
   render() {
-    const { props: {logs}, state: { query } } = this;
-    const data = logs.transactions.data || [];
+    const { props: { logs  }, state: { query } } = this,
+    { transactions: { data,  tabHeaders } } = logs;
+    
     let output;
 
     if (logs.transactions.status === STATUS.SUCCESS) {
       if (data.length) {
         output = (
-          <LogGrid data-type={query} data-testid="LogGrid">
-           
-          </LogGrid>
+          // <LogGrid data-type={query} data-testid="LogGrid">
+          <DataGrid
+          id="gridContainer"
+          dataSource={data}
+          keyExpr="id"
+          width={500}
+          showBorders={true}
+        >
+          <Selection mode="single" />
+          <Column
+            dataField={tabHeaders[0]}
+            width={30}
+            caption="id"
+          />
+          <Column dataField={tabHeaders[1]} width={200}  />
+          <Column dataField={tabHeaders[2]} width={140} dataType="date" />
+          <Column dataField={tabHeaders[3]} alignment="right" format="currency" />
+          <Summary>
+            <TotalItem
+             column={tabHeaders[1]}
+             summaryType="count"
+             alignment="left"/>
+            <TotalItem
+              column={tabHeaders[3]}
+              summaryType="avg"
+              alignment="right"
+              customizeText={this.customizeDate}
+            />
+            <TotalItem
+              column={tabHeaders[3]}
+              summaryType="sum"
+              alignment="right"
+              valueFormat="currency"
+            />
+          </Summary>
+        </DataGrid>
+          // </LogGrid>
         );
       } else {
         output = <h3>Nothing found</h3>;
@@ -158,7 +199,8 @@ export class Log extends React.Component {
     return (
       <div key="Log" data-testid="LogWrapper">
         <Flex justifyContent="center">
-          <ButtonGroup role="group" aria-label="Log Selector" data-testid="LogSelector">
+          {output}
+          {/* <ButtonGroup role="group" aria-label="Log Selector" data-testid="LogSelector">
             <Button
               animate={query === 'react' && logs.transactions.status === 'running'}
               bordered={query !== 'react'}
@@ -176,10 +218,11 @@ export class Log extends React.Component {
               onClick={this.handleClick}
             >
               Redux
-            </Button>
-          </ButtonGroup>
+            </Button> 
+            
+          </ButtonGroup>*/}
         </Flex>
-        {output}
+        
       </div>
     );
   }

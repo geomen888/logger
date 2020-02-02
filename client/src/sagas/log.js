@@ -1,6 +1,6 @@
 /**
- * @module Sagas/GitHub
- * @desc GitHub
+ * @module Sagas/Log
+ * @desc Log
  */
 
 import { all, call, put, takeLatest } from 'redux-saga/effects';
@@ -9,7 +9,7 @@ import * as R from 'ramda';
 import { ActionTypes } from 'constants/index';
 
 /**
- * Get Repos
+ * Get Transactions
  *
  * @param {Object} action
  *
@@ -18,7 +18,7 @@ export function* getTrans({ payload }) {
   try {
     const response = yield call(
       request,
-      ` http://localhost:9005/api/transactions`,
+      'http://172.19.0.5:9005/api/transactions',
     );
     console.log("getTrans:", response)
     yield put({
@@ -35,7 +35,7 @@ export function* getTrans({ payload }) {
 }
 
 /**
- * GitHub Sagas
+ * Log Sagas
  */
 export default function* root() {
   yield all([takeLatest(ActionTypes.API_GET_TRANSACTIONS, getTrans)]);
