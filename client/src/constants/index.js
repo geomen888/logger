@@ -21,6 +21,9 @@ export const ActionTypes = keyMirror({
   API_GET_TRANSACTIONS: undefined,
   API_GET_TRANSACTIONS_SUCCESS: undefined,
   API_GET_TRANSACTIONS_FAILURE: undefined,
+  API_UPLOAD_CSV_FILE: undefined,
+  API_UPLOAD_CSV_FILE_SUCCESS: undefined,
+  API_UPLOAD_CSV_FILE_FAILURE: undefined,
   SHOW_ALERT: undefined,
   HIDE_ALERT: undefined,
 });

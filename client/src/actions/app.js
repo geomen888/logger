@@ -15,7 +15,7 @@ export const { hideAlert, showAlert, switchMenu } = createActions({
   [ActionTypes.SWITCH_MENU]: (query) => ({ query }),
   [ActionTypes.HIDE_ALERT]: (id) => ({ id }),
   [ActionTypes.SHOW_ALERT]: (message, options) => {
-    const timeout = options.variant === 'danger' ? 0 : 5;
+    const timeout = options.variant === 'danger' ? 5 : 10;
 
     return {
       id: options.id || uid(),

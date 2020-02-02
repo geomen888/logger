@@ -1,113 +1,38 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 import { connect } from 'react-redux';
-import styled from 'styled-components';
+import * as R from 'ramda';
 import treeChanges from 'tree-changes';
-import { appColor } from 'modules/theme';
-import { getTrans, showAlert, switchMenu } from 'actions';
+import { getTrans, showAlert,  uploadFile } from 'actions';
 import { STATUS } from 'constants/index';
-
+import { Progress } from 'reactstrap';
+import { ToastContainer, toast } from 'react-toastify';
 import {
-  ButtonGroup,
   Button,
   Flex,
-  Heading,
-  Link,
-  Image,
-  Paragraph,
-  theme,
-  utils,
-} from 'styled-minimal';
+ } from 'styled-minimal';
 import DataGrid, {
   Column,
   Selection,
+  Paging,
   Summary,
+  Pager,
   TotalItem
 } from "devextreme-react/data-grid";
 import Loader from 'components/Loader';
-
-const { responsive, spacer } = utils;
-const { grays } = theme;
-
-const LogGrid = styled.ul`
-  display: grid;
-  grid-auto-flow: row;
-  grid-gap: ${spacer(2)};
-  grid-template-columns: 100%;
-  list-style: none;
-  margin: ${spacer(4)} auto 0;
-  padding: 0;
-  /* stylelint-disable */
-  ${/* istanbul ignore next */ p =>
-    responsive({
-      ix: `
-        grid-gap: ${spacer(3)(p)};
-        width: 90%;
-      `,
-      md: `
-        grid-template-columns: repeat(2, 1fr);
-        width: 100%;
-      `,
-      lg: `
-        grid-template-columns: repeat(3, 1fr);
-      `,
-      xl: `
-        grid-gap: ${spacer(4)(p)};
-        grid-template-columns: repeat(4, 1fr);
-      `,
-    })};
-  /* stylelint-enable */
-
-  > li {
-    display: flex;
-  }
-`;
-
-const Item = styled(Link)`
-  align-items: center;
-  border: solid 0.1rem ${appColor};
-  border-radius: 0.4rem;
-  overflow: hidden;
-  padding: ${spacer(3)};
-  text-align: center;
-  width: 100%;
-  /* stylelint-disable */
-  ${/* istanbul ignore next */ p =>
-    responsive({
-      md: `
-        padding: ${spacer(3)(p)};
-      `,
-      lg: `
-        padding: ${spacer(4)(p)};
-      `,
-    })};
-  /* stylelint-enable */
-
-  p {
-    color: #000;
-  }
-
-  img {
-    height: 8rem;
-    margin-bottom: ${spacer(2)};
-  }
-`;
-
-const ItemHeader = styled.div`
-  margin-bottom: ${spacer(3)};
-
-  small {
-    color: ${grays.gray60};
-  }
-`;
+import 'react-toastify/dist/ReactToastify.css';
 
 export class Log extends React.Component {
   constructor(props) {
     super(props);
 
     this.state = {
-      query: 'react',
+      selectedFile: null,
+      loaded: 0
     };
+    // autoBind.react(this);
+    this.onClickHandler = this.onClickHandler.bind(this);
+    this.onChangeHandler = this.onChangeHandler.bind(this);
   }
 
   static propTypes = {
@@ -116,36 +41,114 @@ export class Log extends React.Component {
   };
 
   componentDidMount() {
-    const { query } = this.state;
     const { dispatch } = this.props;
 
-   dispatch(getTrans(query));
+    dispatch(getTrans({}));
   }
 
   componentDidUpdate(prevProps) {
     const { dispatch, logs } = this.props;
     const { changedTo } = treeChanges(prevProps, this.props);
-
+    // console.info('componentDidUpdate:prevProps:', prevProps)
     if (changedTo('logs.transactions.status', STATUS.ERROR)) {
       dispatch(showAlert(logs.transaction.message, { variant: 'danger' }));
     }
+    if (changedTo('logs.uploading.status', STATUS.ERROR) || changedTo('logs.uploading.status', STATUS.SUCCESS)) {
+      this.setState({
+        selectedFile: null,
+        loaded: 0
+      })
+    }
   }
 
-  handleClick = e => {
-    const { query } = e.currentTarget.dataset;
-    const { dispatch } = this.props;
+  checkMimeType = (event) => {
+    const { logs: { mimeTypes } } = this.props;
+    //getting file object
+    let files = event.target.files
+    //define message container
+    let err = []
+    // list allow mime type
+    //const types = ['image/png', 'image/jpeg', 'image/gif']
+    // loop access array
+    for (let x = 0; x < files.length; x++) {
+      // compare file type find doesn't matach
+      if (mimeTypes.every(type => files[x].type !== type)) {
+        // create error message and assign to container   
+        err[x] = files[x].type + ' is not a supported format\n';
+      }
+    };
+    for (let z = 0; z < err.length; z++) {// if message not same old that mean has error 
+      // discard selected file
+      toast.error(err[z])
+      event.target.value = null
+    }
+    return true;
+  }
 
-    this.setState({
-      query,
-    });
+  maxSelectFile = (event) => {
+    let files = event.target.files
+    if (files.length > 1) {
+      const msg = 'Only 1 csv file can be uploaded at a time'
+      event.target.value = null
+      toast.warn(msg)
+      return false;
+    }
+    return true;
+  }
 
-    dispatch(switchMenu(query));
-  };
+  checkFileSize = (event) => {
+    let files = event.target.files
+    let size = 2000000
+    let err = [];
+    for (let x = 0; x < files.length; x++) {
+      if (files[x].size > size) {
+        err[x] = files[x].type + 'is too large, please pick a smaller file\n';
+      }
+    };
+    for (let z = 0; z < err.length; z++) {// if message not same old that mean has error 
+      // discard selected file
+      toast.error(err[z])
+      event.target.value = null
+    }
+    return true;
+  }
+  onChangeHandler = event => {
+    var files = event.target.files
+    // console.info("onChangeHandler:Files is OK", files)
+    if (this.maxSelectFile(event) && this.checkMimeType(event) && this.checkFileSize(event)) {
+      // if return true allow to setState
+      console.info("onChangeHandler:MimeTypes is OK")
+      this.setState({
+        selectedFile: files,
+        loaded: 0
+      })
+    }
+  }
+  onClickHandler = () => {
+    const { props: { dispatch }, state: { selectedFile } } = this;
+    // console.info("onClickHandler:selectedFile", selectedFile)
+    const dataFile = new FormData();
+    // console.info("onClickHandler:dataFile:", dataFile)
+    for (let x = 0; x < selectedFile.length; x++) {
+      dataFile.append('file', selectedFile[x])
+    }
+    const loadProgress = {
+      onUploadProgress: ProgressEvent => {
+        this.setState({
+          loaded: (ProgressEvent.loaded / ProgressEvent.total * 100),
+        })
+      }
+    }
+
+    dispatch(uploadFile(dataFile, loadProgress, toast))
+
+  }
 
   render() {
-    const { props: { logs  }, state: { query } } = this,
-    { transactions: { data,  tabHeaders } } = logs;
-    
+    const { props: { logs }, state: { selectedFile, loaded } } = this,
+      { transactions: { data, tabHeaders } } = logs,
+      disable = R.anyPass([R.isNil, R.isEmpty])(selectedFile);
+
     let output;
 
     if (logs.transactions.status === STATUS.SUCCESS) {
@@ -153,40 +156,45 @@ export class Log extends React.Component {
         output = (
           // <LogGrid data-type={query} data-testid="LogGrid">
           <DataGrid
-          id="gridContainer"
-          dataSource={data}
-          keyExpr="id"
-          width={500}
-          showBorders={true}
-        >
-          <Selection mode="single" />
-          <Column
-            dataField={tabHeaders[0]}
-            width={30}
-            caption="id"
-          />
-          <Column dataField={tabHeaders[1]} width={200}  />
-          <Column dataField={tabHeaders[2]} width={140} dataType="date" />
-          <Column dataField={tabHeaders[3]} alignment="right" format="currency" />
-          <Summary>
-            <TotalItem
-             column={tabHeaders[1]}
-             summaryType="count"
-             alignment="left"/>
-            <TotalItem
-              column={tabHeaders[3]}
-              summaryType="avg"
-              alignment="right"
-              customizeText={this.customizeDate}
+            id="gridContainer"
+            dataSource={data}
+            keyExpr="id"
+            width={500}
+            showBorders={true}
+          >
+            <Selection mode="single" />
+            <Paging defaultPageSize={10} />
+            <Pager
+              showPageSizeSelector={true}
+              allowedPageSizes={[5, 10, 20]}
+              showInfo={true}
             />
-            <TotalItem
-              column={tabHeaders[3]}
-              summaryType="sum"
-              alignment="right"
-              valueFormat="currency"
+            <Column
+              dataField={tabHeaders[0]}
+              width={30}
+              caption="id"
             />
-          </Summary>
-        </DataGrid>
+            <Column dataField={tabHeaders[1]} width={200} />
+            <Column dataField={tabHeaders[2]} width={140} dataType={'date'} format={'yyyy-MM-dd hh:mm'} />
+            <Column dataField={tabHeaders[3]} alignment="right" format="currency" />
+            <Summary>
+              <TotalItem
+                column={tabHeaders[1]}
+                summaryType="count"
+                alignment="left" />
+              <TotalItem
+                column={tabHeaders[3]}
+                summaryType="avg"
+                alignment="right"
+              />
+              <TotalItem
+                column={tabHeaders[3]}
+                summaryType="sum"
+                alignment="right"
+                valueFormat="currency"
+              />
+            </Summary>
+          </DataGrid>
           // </LogGrid>
         );
       } else {
@@ -200,29 +208,33 @@ export class Log extends React.Component {
       <div key="Log" data-testid="LogWrapper">
         <Flex justifyContent="center">
           {output}
-          {/* <ButtonGroup role="group" aria-label="Log Selector" data-testid="LogSelector">
-            <Button
-              animate={query === 'react' && logs.transactions.status === 'running'}
-              bordered={query !== 'react'}
-              size="lg"
-              data-query="react"
-              onClick={this.handleClick}
-            >
-              React
-            </Button>
-            <Button
-              animate={query === 'redux' && logs.transactions.status === 'running'}
-              bordered={query !== 'redux'}
-              size="lg"
-              data-query="redux"
-              onClick={this.handleClick}
-            >
-              Redux
-            </Button> 
-            
-          </ButtonGroup>*/}
         </Flex>
-        
+         <Flex>
+          <div className="row" style={{
+            margin: '3em auto'
+          }}>
+            <div className="offset-md-3 col-md-6">
+              <div className="form-group files">
+                <label>Upload Your Single CSV-File </label>
+                <input type="file" className="form-control" multiple onChange={this.onChangeHandler} />
+              </div>
+              <div className="form-group">
+                <ToastContainer />
+                <Progress max="100" color="success" value={loaded} >{Math.round(loaded, 2)}%</Progress>
+
+              </div>
+              <Button
+               disabled={disable}
+                animate={!disable && !!loaded}
+                bordered={disable}
+                size="sm"
+                onClick={this.onClickHandler}
+              >
+                Upload
+            </Button>
+            </div>
+          </div>
+        </Flex>
       </div>
     );
   }

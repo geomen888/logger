@@ -1,6 +1,6 @@
 {
-  "name": "react-redux-saga-boilerplate",
-  "description": "Boilerplate with React and Redux with Redux Saga",
+  "name": "react-csv-uploader",
+  "description": "csv file uploader",
   "version": "2019.10.0",
   "author": "Gil Barbara <gilbarbara@gmail.com>",
   "repository": {
@@ -19,6 +19,8 @@
   ],
   "dependencies": {
     "add": "^2.0.6",
+    "auto-bind": "^4.0.0",
+    "axios": "^0.19.2",
     "classlist-polyfill": "^1.2.0",
     "devextreme": "^19.2.6",
     "devextreme-react": "^19.2.6",
@@ -40,7 +42,9 @@
     "react-inlinesvg": "^1.1.7",
     "react-redux": "^7.1.1",
     "react-router-dom": "^5.1.2",
+    "react-toastify": "^5.5.0",
     "react-transition-group": "^4.3.0",
+    "reactstrap": "^8.4.1",
     "redux": "^4.0.4",
     "redux-actions": "^2.6.5",
     "redux-persist": "^6.0.0",

@@ -50,7 +50,7 @@ export class TransActionRepository implements IRepository {
                         console.log("headers", headers)
                        
                     } else if (counter > 1) {
-                        const payl = R.compose(R.evolve({ amount: R.ifElse(R.isNil, R.always(0), parseInt) }), R.fromPairs, R.tap(X => console.log("Trimdoc:", JSON.stringify(X))), R.map(R.map(removeNL)))(R.transpose([headers, decoder.write(doc).split(',')]));
+                        const payl = R.compose(R.evolve({ amount: R.ifElse(R.isNil, R.always(0), int => parseInt(int)) }), R.fromPairs, R.tap(X => console.log("Trimdoc:", JSON.stringify(X))), R.map(R.map(removeNL)))(R.transpose([headers, decoder.write(doc).split(',')]));
                         const { id, datetime, cardHolderNumberHash } =  R.pickAll(headersMain, payl);
                         if (!id || !datetime || !cardHolderNumberHash) {
                             const err = new Error(`id:${id?id:"N/A"} in data structure has empty fields {code: 703}`);

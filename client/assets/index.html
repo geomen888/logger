@@ -318,7 +318,7 @@
         }
       </style>
     </div>
-    <% if (htmlWebpackPlugin.options.window) { %>
+    <!-- <% if (htmlWebpackPlugin.options.window) { %>
     <script>
       <% for (var varName in htmlWebpackPlugin.options.window) { %>
         window['<%= varName %>'] = <%= JSON.stringify(htmlWebpackPlugin.options.window[varName]) %>;
@@ -348,7 +348,7 @@
           ga('send', 'pageview');
           <% } %>
     </script>
-    <% } %>
+    <% } %> -->
     <noscript>
       <div
         style="align-items: center; display: flex; font-size: 30px; justify-content: center; min-height: 100vh;"

@@ -6,7 +6,7 @@ import { getPath, mimeTypes, reformateError, getErrorMsg, headersMain } from "./
 import * as _ from "partial-js";
 import "./../../repository/transactionRepository";
 const fs = require("fs"),
-      R = require("ramda"),
+    R = require("ramda"),
     autoBind = require("auto-bind");
 
 
@@ -23,25 +23,30 @@ export class TransactionController {
     async getAll(@Ctx() ctx: Context) {
         const { transRep: { findAll } } = this;
         try {
-        const transactions = await findAll();
-        
-        return { status: 1, 
-           data: { transactions, tabHeaders: headersMain },
-     };
-    } catch (e) {
-        ctx.response.status = 501;
-        return {
-            message: "Error read db",
-            code: 705,
-        };
+            const transactions = await findAll();
+
+            return {
+                status: 1,
+                data: { transactions, tabHeaders: headersMain },
+            };
+        } catch (e) {
+            ctx.response.status = 501;
+            return {
+                message: "Error read db",
+                code: 705,
+            };
+        }
     }
-    }
-   
+
     @Post("/file") // this.transRep.fileUploadOptions
     saveFile(@Ctx() ctx: Context, @UploadedFile("file") file: any) {
         const { transRep: { saveTransactionManager } } = this;
         // console.info(file);
-        if (!R.contains(R.propOr("N/A","mimetype", file))(mimeTypes)) {
+
+        if (!fs.existsSync('/app/uploadedFiles/')) {
+            fs.mkdirSync('/app/uploadedFiles/');
+        }
+        if (!R.contains(R.propOr("N/A", "mimetype", file))(mimeTypes)) {
             ctx.response.status = 403;
             return {
                 message: "Error mimetype file",
@@ -73,7 +78,7 @@ export class TransactionController {
             return await saveTransactionManager(feed)
                 .then(() => {
                     return {
-                        status:1,
+                        status: 1,
                         data: {
                             filename: file.originalname,
                             size: file.size,
@@ -83,7 +88,7 @@ export class TransactionController {
                 })
                 .catch((err) => {
                     console.error("saveTransactionManager:err:", err);
-                   //  console.error("saveTransactionManager:err:reformateError", reformateError(err));
+                    //  console.error("saveTransactionManager:err:reformateError", reformateError(err));
                     if (R.compose(R.has("code"), reformateError)(err)) {
                         // R.evolve({code: R.replace(/\W(\d*)/gmi, "$1")})(k)
                         ctx.response.status = 403;
@@ -92,15 +97,15 @@ export class TransactionController {
                             ...getErrorMsg(err)
                         };
 
-                    } 
-                        ctx.response.status = 501;
-                        return {
-                            message: "Error write to db",
-                            code: 701,
-                        };
+                    }
+                    ctx.response.status = 501;
+                    return {
+                        message: "Error write to db",
+                        code: 701,
+                    };
                 })
 
-            })
+        })
     }
 
 }
