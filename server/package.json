@@ -10,7 +10,7 @@
     "start": "ts-node src/index.ts"
   },
   "dependencies": {
-    "@fast-csv/parse": "^4.0.2",
+    "@fast-csv/parse": "^4.3.6",
     "@koa/multer": "^2.0.2",
     "@types/async": "^3.0.7",
     "@types/bluebird": "^3.5.29",
