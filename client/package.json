@@ -33,7 +33,7 @@
     "nanoid": "^2.1.2",
     "polished": "^3.4.1",
     "prop-types": "^15.7.2",
-    "qs": "^6.9.0",
+    "qs": "^6.9.7",
     "ramda": "^0.26.1",
     "react": "^16.10.2",
     "react-app-polyfill": "1.0.4",
